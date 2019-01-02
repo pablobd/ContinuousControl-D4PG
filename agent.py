@@ -23,7 +23,7 @@ class Agent:
     " Interacts with and learns from the environment "
     
     
-    def __init__(self, action_size, state_size, random_seed):
+    def __init__(self, action_size, state_size, n_agents = 1, random_seed = 123):
         """ Initialize attributes of Agent        
         Params
         ======
@@ -32,6 +32,7 @@ class Agent:
             random_seed (int): random seed
         """
         
+        self.n_agents = n_agents
         self.action_size = action_size
         self.state_size = state_size
         self.seed = random.seed(random_seed)
@@ -44,7 +45,7 @@ class Agent:
         self.target_critic = Critic(action_size, state_size, random_seed, hidden_layers = [256, 256, 128, 64])
         self.critic_optimizer = optim.Adam(self.local_critic.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY)        
         
-        self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, random_seed)
+        self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, n_agents, random_seed)
         
         self.noise = OUNoise(action_size, random_seed)
         
@@ -80,7 +81,9 @@ class Agent:
             
         self.local_actor.train() # set nework on train mode
         if add_noise:
-            action += self.noise.sample()
+            for i in range(self.n_agents):
+                action[i,:] += self.noise.sample()
+                
         return np.clip(action, -1, 1)
         
         return action
@@ -168,14 +171,15 @@ class OUNoise:
 class ReplayBuffer:
     " Internal memory of the agent "
     
-    def __init__(self, buffer_size, batch_size, seed):
+    def __init__(self, buffer_size, batch_size, n_agents, seed):
         """Initialize a ReplayBuffer object.
         Params
         ======
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
         """
-    
+        
+        self.n_agents = n_agents
         self.memory = deque(maxlen=buffer_size)
         self.batch_size = batch_size
         
@@ -185,9 +189,9 @@ class ReplayBuffer:
         
     def add(self, state, action, reward, next_state, done):
         " Add a new experience to memory "
-        
-        e = self.experience(state, action, reward, next_state, done)
-        self.memory.append(e)
+        for i in range(n_agents):
+            e = self.experience(state[i,:], action[i,:], reward[i], next_state[i,:], done[i])
+            self.memory.append(e)
         
     def sample(self):
         " Randomly sample a batch of experiences from the memory "
