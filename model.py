@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 def hidden_init(layer):
     fan_in = layer.weight.data.size()[0]
     lim = 1. / np.sqrt(fan_in)
@@ -35,6 +37,12 @@ class Actor(nn.Module):
         
         # final layer
         self.output = nn.Linear(hidden_layers[-1], action_size)
+        
+        # send networks to device
+        for linear in self.hidden_layers:
+            linear.to(device)
+        
+        self.output.to(device)
         
         self.initialize_weights()
         
@@ -90,6 +98,12 @@ class Critic(nn.Module):
         
         # final layer
         self.output = nn.Linear(hidden_layers[-1], 1)
+        
+        # send networks to device
+        for linear in self.hidden_layers:
+            linear.to(device)
+        
+        self.output.to(device)
         
         self.initialize_weights()
         
