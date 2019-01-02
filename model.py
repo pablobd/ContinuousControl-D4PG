@@ -14,7 +14,7 @@ def hidden_init(layer):
 class Actor(nn.Module):
     " Actor (Policy) Model - Neural net to decide what action the agent must take "
     
-    def __init__(self, action_size, state_size, seed, hidden_layers = [256, 64]):
+    def __init__(self, action_size, state_size, seed, hidden_layers, init_weights):
         """
         Initialize parameters and build model.
         
@@ -44,7 +44,9 @@ class Actor(nn.Module):
         
         self.output.to(device)
         
-        self.initialize_weights()
+        if init_weights:
+            print("initializing weights...")
+            self.initialize_weights()
         
     def initialize_weights(self):
         " Initialize weights of layers "
@@ -74,7 +76,7 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     " Critic (Value) Model - Neural net to estimate the total expected episodic return associated to one action in a given state "
     
-    def __init__(self, action_size, state_size, seed, hidden_layers = [256, 256, 128, 64]):
+    def __init__(self, action_size, state_size, seed, hidden_layers, init_weights):
         """
         Initialize parameters and build model.
         
@@ -105,7 +107,9 @@ class Critic(nn.Module):
         
         self.output.to(device)
         
-        self.initialize_weights()
+        if init_weights:
+            print("initializing weights...")
+            self.initialize_weights()
         
     def initialize_weights(self):
         " Initialize weights of layers "
