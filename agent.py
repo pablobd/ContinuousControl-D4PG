@@ -189,7 +189,7 @@ class ReplayBuffer:
         
     def add(self, state, action, reward, next_state, done):
         " Add a new experience to memory "
-        for i in range(n_agents):
+        for i in range(self.n_agents):
             e = self.experience(state[i,:], action[i,:], reward[i], next_state[i,:], done[i])
             self.memory.append(e)
         
