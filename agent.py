@@ -59,7 +59,7 @@ class Agent:
         
         # list of noise processes, each agent has an independent process
         self.noise = []
-        for i in n_agents:
+        for i in range(n_agents):
             self.noise.append(OUNoise(action_size, random_seed))
         
     def step(self, state, action, reward, next_state, done):
