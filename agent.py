@@ -150,7 +150,8 @@ class Agent:
         
     
     def reset(self):
-        self.noise.reset()
+        for i in range(self.n_agents):
+            self.noise[i].reset()
     
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
