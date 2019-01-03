@@ -57,7 +57,10 @@ class Agent:
         
         self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, n_agents, random_seed)
         
-        self.noise = OUNoise(action_size, random_seed)
+        # list of noise processes, each agent has an independent process
+        self.noise = []
+        for i in n_agents:
+            self.noise.append(OUNoise(action_size, random_seed))
         
     def step(self, state, action, reward, next_state, done):
         """ Saves experience in replay memory, and uses random sample from buffer to learn        
@@ -84,20 +87,26 @@ class Agent:
         ======
             state (float ndarray): state of the environment        
         """
-        state = torch.from_numpy(state).float().to(device)
-        self.local_actor.eval() # set network on eval mode, this has any effect only on certain modules (Dropout, BatchNorm, etc.)
+        action = np.zeros((self.n_agents, self.action_size)) # initialize multidimensional array actions of each agent
         
+        for i in range(self.n_agents):
+            state_i = torch.from_numpy(state[i,:]).float().to(device)
+            self.local_actor.eval() # set network on eval mode, this has any effect only on certain modules (Dropout, BatchNorm, etc.)
+            with torch.no_grad():
+                action[i,:] = self.local_actor(state_i).cpu().data.numpy()
+        
+        """state = torch.from_numpy(state).float().to(device)
+        self.local_actor.eval() # set network on eval mode, this has any effect only on certain modules (Dropout, BatchNorm, etc.)
         with torch.no_grad():
-            action = self.local_actor(state).cpu().data.numpy()
-            
+            action = self.local_actor(state).cpu().data.numpy()"""
+                
         self.local_actor.train() # set nework on train mode
         if add_noise:
             for i in range(self.n_agents):
-                action[i,:] += self.noise.sample()
+                action[i,:] += self.noise[i].sample()
                 
         return np.clip(action, -1, 1)
         
-        return action
     
     def learn(self, batch, gamma):
         """ given a batch of experiences, perform gradient ascent on the local networks and soft update on target networks
@@ -122,6 +131,7 @@ class Agent:
         # Minimize the loss
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.local_critic.parameters(), 1)
         self.critic_optimizer.step()
         
         
@@ -131,6 +141,7 @@ class Agent:
         # Minimize the loss
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.local_actor.parameters(), 1)
         self.actor_optimizer.step()
         
         # soft update of target networks
