@@ -1,4 +1,5 @@
 import numpy as np
+import math
 from collections import namedtuple, deque
 import random, copy
 
@@ -8,14 +9,14 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-BUFFER_SIZE = int(1e6)  # replay buffer size
-BATCH_SIZE = 128        # minibatch size
+BUFFER_SIZE = int(1e5)  # replay buffer size
+BATCH_SIZE = 128         # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
 LR_CRITIC = 3e-4        # learning rate of the critic
-WEIGHT_DECAY_CR = 0.0005    # L2 weight decay CRITIC
-WEIGHT_DECAY_AC = 0.000    # L2 weight decay ACTOR
+WEIGHT_DECAY_CR = 0.0001    # L2 weight decay CRITIC
+WEIGHT_DECAY_AC = 0.000     # L2 weight decay ACTOR
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -76,9 +77,16 @@ class Agent:
         self.memory.add(state, action, reward, next_state, done)
         
         if len(self.memory) > BATCH_SIZE:
-            #for i in range(max(20, len(self.memory) // BATCH_SIZE)):
-            batch = self.memory.sample()
-            self.learn(batch, GAMMA)
+            min_learning = len(self.memory) // BATCH_SIZE
+            num_learning = np.min([self.n_agents, min_learning])
+            
+            for i in range(1, num_learning):
+                update_target_net = False
+                batch = self.memory.sample()
+                if ( i % 2 ) == 0:
+                    update_target_net = True
+                    
+                self.learn(batch, GAMMA, update_target_net)
         
         
     def act(self, state, add_noise = True):
@@ -108,7 +116,7 @@ class Agent:
         return np.clip(action, -1, 1)
         
     
-    def learn(self, batch, gamma):
+    def learn(self, batch, gamma, update_target_net = True):
         """ given a batch of experiences, perform gradient ascent on the local networks and soft update on target networks
         Q_targets = r + γ * critic_target(next_state, actor_target(next_state))
         where:
@@ -122,7 +130,6 @@ class Agent:
         """
         states, actions, rewards, next_states, dones = batch
         
-               
         # compute critic loss
         Q_local = self.local_critic(states, actions)
         Q_target_next = self.target_critic(next_states, self.target_actor(next_states))
@@ -145,8 +152,9 @@ class Agent:
         self.actor_optimizer.step()
         
         # soft update of target networks
-        self.soft_update(self.local_critic, self.target_critic, TAU)
-        self.soft_update(self.local_actor, self.target_actor, TAU)
+        if(update_target_net):
+            self.soft_update(self.local_critic, self.target_critic, TAU)
+            self.soft_update(self.local_actor, self.target_actor, TAU)
         
     
     def reset(self):
