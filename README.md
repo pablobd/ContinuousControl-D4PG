@@ -22,7 +22,7 @@ The environment is considered solved, when the average (over 100 episodes) of th
 
 
 ## Requirements
-First of all, you need python 3 and conda. We suggest to use the [Anaconda distribution](https://www.anaconda.com/download/#linux), although other options are available. Follow the instructions at the github [repository dlrn](https://github.com/udacity/deep-reinforcement-learning) to create an environment for the project, install dependencies and create a kernel. You will not need to install Unity, because Udacity provides two separate versions of the Unity environment:
+First of all, you need python 3 and conda. We suggest to use the [Anaconda distribution](https://www.anaconda.com/download/#linux), although other options are available. Follow the instructions at the github [repository dlrn](https://github.com/udacity/deep-reinforcement-learning) to create an environment for the project, install dependencies (pytorch, matplotlib, numpy, and collections) and create a kernel. You will not need to install Unity, because Udacity provides two separate versions of the Unity environment:
 
 * It contains 20 identical agents, each with its own copy of the environment.
 
