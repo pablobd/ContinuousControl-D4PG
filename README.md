@@ -45,7 +45,7 @@ For game developers, these trained agents can be used for multiple purposes, inc
 
 
 ## How it works
-Open the file  jupyter notebook Continuous_Control_ParallelDDPG.ipynb and execute it reading carefully the instructions. Notice that when creating an environemnt for the game we forced the option no_graphics=True. You can change it to False to see a graphic representation of the game.
+Open the file  jupyter notebook Continuous_Control_ParallelD4PG.ipynb and execute it reading carefully the instructions. Notice that when creating an environemnt for the game we forced the option no_graphics=True. You can change it to False to see a graphic representation of the game.
 
 
 
