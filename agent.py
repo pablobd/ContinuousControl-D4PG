@@ -1,5 +1,4 @@
 import numpy as np
-import math
 from collections import namedtuple, deque
 import random, copy
 
@@ -9,14 +8,15 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-BUFFER_SIZE = int(1e5)  # replay buffer size
+BUFFER_SIZE = int(1e6)  # replay buffer size
 BATCH_SIZE = 128         # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
 LR_CRITIC = 3e-4        # learning rate of the critic
-WEIGHT_DECAY_CR = 0.0001    # L2 weight decay CRITIC
+WEIGHT_DECAY_CR = 1e-4    # L2 weight decay CRITIC
 WEIGHT_DECAY_AC = 0.000     # L2 weight decay ACTOR
+UPDATE_EVERY = 2        # update target networks every two gradient ascent steps
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -46,13 +46,13 @@ class Agent:
         self.state_size = state_size
         self.seed = random.seed(random_seed)
         
-        self.local_actor = Actor(action_size, state_size, random_seed, hidden_layers = [256], init_weights = initialize_weights)
-        self.target_actor = Actor(action_size, state_size, random_seed, hidden_layers = [256], init_weights = initialize_weights)
+        self.local_actor = Actor(action_size, state_size, random_seed, hidden_layers = [64, 32], init_weights = initialize_weights)
+        self.target_actor = Actor(action_size, state_size, random_seed, hidden_layers = [64, 32], init_weights = initialize_weights)
         self.actor_optimizer = optim.Adam(self.local_actor.parameters(), lr=LR_ACTOR, weight_decay=WEIGHT_DECAY_AC)
 
-        self.local_critic = Critic(action_size, state_size, random_seed, hidden_layers = [128, 128, 64], 
+        self.local_critic = Critic(action_size, state_size, random_seed, hidden_layers = [128, 64, 64, 32], 
                                    init_weights = initialize_weights)
-        self.target_critic = Critic(action_size, state_size, random_seed, hidden_layers = [128, 128, 64], 
+        self.target_critic = Critic(action_size, state_size, random_seed, hidden_layers = [128, 64, 64, 32], 
                                     init_weights = initialize_weights)
         self.critic_optimizer = optim.Adam(self.local_critic.parameters(), lr=LR_CRITIC, weight_decay=WEIGHT_DECAY_CR)        
         
@@ -83,13 +83,13 @@ class Agent:
             for i in range(1, num_learning):
                 update_target_net = False
                 batch = self.memory.sample()
-                if ( i % 2 ) == 0:
+                if (i + 1) % UPDATE_EVERY == 0:
                     update_target_net = True
                     
                 self.learn(batch, GAMMA, update_target_net)
         
         
-    def act(self, state, add_noise = True):
+    def act(self, state, current_score, max_score, add_noise = True):
         """ Given a state choose an action
         Params
         ======
@@ -111,7 +111,9 @@ class Agent:
         self.local_actor.train() # set nework on train mode
         if add_noise:
             for i in range(self.n_agents):
-                action[i,:] += self.noise[i].sample()
+                # the closer ihe score gets to the max score the less noise we add
+                damping_factor = (max_score - np.min([max_score, current_score])) / max_score 
+                action[i,:] += self.noise[i].sample() * damping_factor
                 
         return np.clip(action, -1, 1)
         
@@ -148,7 +150,6 @@ class Agent:
         # Minimize the loss
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.local_actor.parameters(), 1)
         self.actor_optimizer.step()
         
         # soft update of target networks
