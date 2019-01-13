@@ -14,25 +14,37 @@ On this implementation we chose the following strategy to solve the environment,
 * the (local) actor and critic networks are updated 20 times in a row (one for each agent), using 20 different samples from the replay buffer (because the environment provided has 20 agents),
 * the (target) actor and critic networks are updated once every two updates and with a soft update,
 * gradient clipping is used on the critic network to further stabilize learning, 
-* the Critic network with 33 input units (state size), hidden layers of 256, 128 + 4 (action size), 128 and 64 units, and an output layer of 1 unit,
-* the Actor network has an input layer of 33 units (state size), a single hidden layer of 264 units, and an output layer of 4 units (action size).
+* the Critic network with 33 input units (state size), hidden layers of 128, 64, 64 + 4 (action size) and 32 units, and an output layer of 1 unit,
+* the Actor network has an input layer of 33 units (state size), two hidden layer of 64 and 32 units, and an output layer of 4 units (action size),
+* noise dampening, with a function of the average score, so that when the average score approaches the maximum score of 40, the noise amplitude reduces.
 
-The following values ofr hyperparameters are used:
+The following values of the hyperparameters are used:
+* BUFFER_SIZE = 1e6
 * BATCH_SIZE = 128
 * GAMMA = 0.99
 * TAU = 1e-3
 * LR_ACTOR = 1e-4
 * LR_CRITIC = 3e-4
-* WEIGHT_DECAY_CR = 0.0001
+* WEIGHT_DECAY_CR = 1e-4
 * WEIGHT_DECAY_AC = 0
+* UPDATE_EVERY = 2
 
 ## Results
 
-This solution reaches a score of 22 in 50 periods but fails to continue learning and stabilizes around this number.
+We have done the training in three stages:
+
+1. Training during 50 episodes and store weights. The average score goes from 0 to 9.
+2. Training during 30 episodes and store weights. The average score goes from 4 to 35.
+3. Training during 100 episodes and store final weights. The average score goes from 19 to 35 in very few steps and finally stabilizes in around 38.
 
 ![alt text](https://github.com/pablobd/ContinuousControl-D4PG/blob/master/d4pg_performance.PNG)
+
+The reason to do this is that training was very time and resource consuming and a good strategy was to split the training in three stages. The agent configuration for the three stages remains identical. However, the buffer is cleaned at the beginning of the three stages and experience starts to be stored from scratch.
 
 
 ## Improvements
 
-In the next release, we want to add prioritized learning to speed up training.
+In the next release, we plan to add the following improvements:
+* Batch normalization after each layer
+* Prioritized learning to speed up training
+
