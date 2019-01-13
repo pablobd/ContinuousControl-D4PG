@@ -35,4 +35,7 @@ This solution reaches a score of 22 in 50 periods but fails to continue learning
 
 ## Improvements
 
-In the next release, we want to add prioritized learning to speed up training.
+In the next release, we plan to add the following improvements:
+* Batch normalization after each layer
+* Prioritized learning to speed up training
+
