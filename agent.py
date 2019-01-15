@@ -8,14 +8,14 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-BUFFER_SIZE = int(1e6)  # replay buffer size
-BATCH_SIZE = 128         # minibatch size
+BUFFER_SIZE = int(1e5)  # replay buffer size
+BATCH_SIZE = 128        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
 LR_CRITIC = 3e-4        # learning rate of the critic
 WEIGHT_DECAY_CR = 1e-4    # L2 weight decay CRITIC
-WEIGHT_DECAY_AC = 0.000     # L2 weight decay ACTOR
+WEIGHT_DECAY_AC = 0     # L2 weight decay ACTOR
 UPDATE_EVERY = 2        # update target networks every two gradient ascent steps
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -46,8 +46,10 @@ class Agent:
         self.state_size = state_size
         self.seed = random.seed(random_seed)
         
-        self.local_actor = Actor(action_size, state_size, random_seed, hidden_layers = [64, 32], init_weights = initialize_weights)
-        self.target_actor = Actor(action_size, state_size, random_seed, hidden_layers = [64, 32], init_weights = initialize_weights)
+        self.local_actor = Actor(action_size, state_size, random_seed, hidden_layers = [64, 32], 
+                                 init_weights = initialize_weights)
+        self.target_actor = Actor(action_size, state_size, random_seed, hidden_layers = [64, 32],
+                                  init_weights = initialize_weights)
         self.actor_optimizer = optim.Adam(self.local_actor.parameters(), lr=LR_ACTOR, weight_decay=WEIGHT_DECAY_AC)
 
         self.local_critic = Critic(action_size, state_size, random_seed, hidden_layers = [128, 64, 64, 32], 
@@ -80,7 +82,7 @@ class Agent:
             min_learning = len(self.memory) // BATCH_SIZE
             num_learning = np.min([self.n_agents, min_learning])
             
-            for i in range(1, num_learning):
+            for i in range(num_learning):
                 update_target_net = False
                 batch = self.memory.sample()
                 if (i + 1) % UPDATE_EVERY == 0:
@@ -95,19 +97,13 @@ class Agent:
         ======
             state (float ndarray): state of the environment        
         """
-        action = np.zeros((self.n_agents, self.action_size)) # initialize multidimensional array actions of each agent
         
-        for i in range(self.n_agents):
-            state_i = torch.from_numpy(state[i,:]).float().to(device)
-            self.local_actor.eval() # set network on eval mode, this has any effect only on certain modules (Dropout, BatchNorm, etc.)
-            with torch.no_grad():
-                action[i,:] = self.local_actor(state_i).cpu().data.numpy()
+        state = torch.from_numpy(state).float().to(device)
         
-        """state = torch.from_numpy(state).float().to(device)
         self.local_actor.eval() # set network on eval mode, this has any effect only on certain modules (Dropout, BatchNorm, etc.)
         with torch.no_grad():
-            action = self.local_actor(state).cpu().data.numpy()"""
-                
+            action = self.local_actor(state).cpu().data.numpy()
+                        
         self.local_actor.train() # set nework on train mode
         if add_noise:
             for i in range(self.n_agents):
