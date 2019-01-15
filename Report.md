@@ -16,6 +16,7 @@ On this implementation we chose the following strategy to solve the environment,
 * gradient clipping is used on the critic network to further stabilize learning, 
 * the Critic network with 33 input units (state size), hidden layers of 128, 64, 64 + 4 (action size) and 32 units, and an output layer of 1 unit,
 * the Actor network has an input layer of 33 units (state size), two hidden layer of 64 and 32 units, and an output layer of 4 units (action size),
+* batch-norm for all layers taking in state and their consequent layers in Actor and critic (but not for those which also take in action),
 * noise dampening, with a function of the average score, so that when the average score approaches the maximum score of 40, the noise amplitude reduces.
 
 The following values of the hyperparameters are used:
@@ -45,6 +46,7 @@ The reason to do this is that training was very time and resource consuming and 
 ## Improvements
 
 In the next release, we plan to add the following improvements:
-* Batch normalization after each layer
-* Prioritized learning to speed up training
+* Prioritized Experience Replay to speed up training. A fast implementation of Prioritized Experience Replay is possible using a special data structure called a Sum Tree.
+* Test other algorithms: Asynchronous Actor-Critic Agents (A3C), Trust Region Policy Optimization (TRPO) and Proximal Policy Optimization (PPO).
+
 
