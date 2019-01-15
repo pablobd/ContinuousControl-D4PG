@@ -32,12 +32,14 @@ class Actor(nn.Module):
         print("Hidden layers Actor: ", hidden_layers)
         
         # initial layer
+        self.batch_norm = nn.ModuleList([nn.BatchNorm1d(state_size)])
         self.hidden_layers = nn.ModuleList([nn.Linear(state_size, hidden_layers[0])])
         
         # hidden layers
         layer_sizes = zip(hidden_layers[:-1], hidden_layers[1:])
                     
         self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
+        self.batch_norm.extend([nn.BatchNorm1d(h) for h in hidden_layers[:-1]])
         
         # final layer
         self.output = nn.Linear(hidden_layers[-1], action_size)
@@ -72,7 +74,9 @@ class Actor(nn.Module):
         """
         
         # forward through each layer in `hidden_layers`, with ReLU activation
-        for linear in self.hidden_layers:
+        layers = zip(self.batch_norm, self.hidden_layers)
+        for batch, linear in layers:
+            x = batch(x)
             x = F.leaky_relu(linear(x))
         
         x = self.output(x)
@@ -101,19 +105,16 @@ class Critic(nn.Module):
         print("Hidden layers Critic: ", hidden_layers)
         
         # initial layer
+        self.batch = nn.BatchNorm1d(state_size)
         self.hidden_layers = nn.ModuleList([nn.Linear(state_size, hidden_layers[0])])
         
-        # second layer - before introducing action input
-        self.hidden_layers.extend([nn.Linear(hidden_layers[0], hidden_layers[1])])
-        
         # hidden layers
-        hidden_layers[1] += action_size
-        layer_sizes = zip(hidden_layers[1:-1], hidden_layers[2:])
+        hidden_layers[0] += action_size
+        layer_sizes = zip(hidden_layers[:-1], hidden_layers[1:])
                         
         self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
         
         # final layer
-        print("hidden_layers[-1]: ", hidden_layers[-1])
         self.output = nn.Linear(hidden_layers[-1], 1)
         
         # send networks to device
@@ -145,15 +146,14 @@ class Critic(nn.Module):
         """
         
         # forward through first layer
-        x = F.leaky_relu(self.hidden_layers[0](states))
-        
-        x = F.leaky_relu(self.hidden_layers[1](x))
+        x = self.batch(states)
+        x = F.leaky_relu(self.hidden_layers[0](x))
         
         # concatenate output of first layer and action vector
         x = torch.cat((x, actions), dim = 1)
         
         # forward through each layer in `hidden_layers`, with Leaky ReLU activation
-        for linear in self.hidden_layers[2:]:
+        for linear in self.hidden_layers[1:]:
             x = F.leaky_relu(linear(x))
         
         return self.output(x)
